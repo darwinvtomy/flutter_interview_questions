@@ -624,4 +624,256 @@ In this structure:
 
 Remember that this is just one possible structure, and you can adjust it to fit your project's specific needs and preferences. Additionally, you may choose to further organize files within each directory based on their functionality or feature-specific modules.
 
+## 104. How can i integrate Provider Package in to the MVVM and Clean Architecture project?
+
+To integrate the `provider` package into your Flutter project that follows the combined MVVM and Clean Architecture structure, you can follow these steps:
+
+1. Add the `provider` package as a dependency in your project's `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^5.0.0
+```
+
+2. Run `flutter pub get` to fetch the package and update your project.
+
+3. Create a new file named `app.dart` (or any other suitable name) inside the `core` directory. This file will act as the central place for setting up dependencies and initializing the necessary providers. Here's an example of how it could look:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'repositories/example_repository.dart';
+import 'use_cases/example_use_case.dart';
+
+class App extends StatelessWidget {
+  const App({Key? key, required Widget child}) : super(key: key, child: child);
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        Provider<ExampleRepository>(
+          create: (_) => ExampleRepository(),
+        ),
+        Provider<ExampleUseCase>(
+          create: (context) => ExampleUseCase(
+            context.read<ExampleRepository>(),
+          ),
+        ),
+        // Add more providers as needed
+      ],
+      child: const MyApp(), // Replace MyApp with your root widget
+    );
+  }
+}
+```
+
+In this example, we're setting up providers for an `ExampleRepository` and an `ExampleUseCase`, which are part of the core layer. You can add more providers for your specific use cases and repositories.
+
+4. In your `main.dart` file, modify the `runApp()` method to wrap your app with the `App` widget:
+
+```dart
+import 'package:flutter/material.dart';
+
+import 'core/app.dart';
+import 'presentation/view/my_app.dart'; // Import your root widget
+
+void main() {
+  runApp(
+    const App(child: MyApp()), // Wrap your root widget with App
+  );
+}
+```
+
+By wrapping your root widget with the `App` widget, you ensure that the providers are accessible throughout the widget tree.
+
+5. Now, you can use the `Provider.of<T>(context)` or `context.watch<T>()` methods to access the provided instances within your views and viewmodels. For example, within a ViewModel:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../core/use_cases/example_use_case.dart';
+
+class ExampleViewModel extends ChangeNotifier {
+  final ExampleUseCase _exampleUseCase;
+
+  ExampleViewModel(BuildContext context)
+      : _exampleUseCase = context.read<ExampleUseCase>();
+
+  void performAction() {
+    // Use _exampleUseCase to perform actions
+  }
+}
+```
+
+In the above example, the `ExampleViewModel` uses the `ExampleUseCase` provided by the `App` widget using `context.read<ExampleUseCase>()`.
+
+Remember to import the necessary `provider` package classes (`Provider`, `Consumer`, `BuildContext`, etc.) wherever you need to use them.
+
+By integrating the `provider` package in this way, you can leverage its functionality for dependency injection and state management within your combined MVVM and Clean Architecture Flutter project.
+
+1. To consume the provided instances in your views, you can use the `Consumer` widget or the `Provider.of<T>(context)` method. Here's an example of using `Consumer` widget in a view:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../viewmodels/example_viewmodel.dart';
+
+class ExampleView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ExampleViewModel>(
+      builder: (context, viewModel, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Example View'),
+          ),
+          body: Center(
+            child: RaisedButton(
+              onPressed: () {
+                viewModel.performAction();
+              },
+              child: Text('Perform Action'),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+In the above example, the `Consumer` widget is used to listen to changes in the `ExampleViewModel`. It rebuilds the specified widget subtree whenever the `ExampleViewModel` changes, allowing you to access and use its methods and properties.
+
+7. Lastly, use the `Provider.of<T>(context, listen: false)` method if you need to access the provided instances without listening to changes. This can be useful in situations where you only need to access a value once or perform an action without updating the UI.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../use_cases/example_use_case.dart';
+
+class ExampleWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final exampleUseCase = Provider.of<ExampleUseCase>(context, listen: false);
+
+    // Use exampleUseCase to perform actions or access values
+
+    return Container();
+  }
+}
+```
+
+By setting `listen` to `false`, the widget will not rebuild if the value of `ExampleUseCase` changes.
+
+That's it! By following these steps, you can integrate the `provider` package into your Flutter project that combines MVVM and Clean Architecture. It provides a convenient way to manage dependencies and share data between different layers of your application.
+
+1. In your ViewModel, you can notify listeners of state changes using the `notifyListeners()` method provided by `ChangeNotifier`. This will trigger a rebuild of the associated widgets that are listening to the ViewModel.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../core/viewmodels/example_viewmodel.dart';
+
+class ExampleView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = Provider.of<ExampleViewModel>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Example View'),
+      ),
+      body: Center(
+        child: RaisedButton(
+          onPressed: () {
+            viewModel.performAction();
+          },
+          child: Text('Perform Action'),
+        ),
+      ),
+    );
+  }
+}
+```
+
+In this example, the `ExampleView` widget uses `Provider.of<ExampleViewModel>(context)` to access the instance of `ExampleViewModel`. When the button is pressed, the `performAction()` method is called, and if it triggers a state change, the associated widgets listening to the ViewModel will be rebuilt.
+
+9. To optimize the performance of your app, you can use the `Consumer` widget or the `context.select()` method to selectively rebuild only the parts of your widget tree that depend on specific values from the ViewModel.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../core/viewmodels/example_viewmodel.dart';
+
+class ExampleView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ExampleViewModel>(
+      builder: (context, viewModel, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Example View'),
+          ),
+          body: Center(
+            child: Column(
+              children: [
+                Text(
+                  'Value: ${viewModel.value}',
+                  style: TextStyle(fontSize: 20),
+                ),
+                RaisedButton(
+                  onPressed: () {
+                    viewModel.incrementValue();
+                  },
+                  child: Text('Increment'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+In this example, the `Text` widget will only rebuild when the `value` property in the ViewModel changes, thanks to the selective rebuilding provided by the `Consumer` widget.
+
+By integrating the `provider` package into your combined MVVM and Clean Architecture Flutter project, you can effectively manage dependencies and handle state management within your application. It allows you to easily provide and access instances of classes across different layers while promoting separation of concerns and maintainability.
+
+1.  To access the provided instances within your ViewModel, you can use the `Provider.of<T>(context)` method or the `context.watch<T>()` method. Here's an example of using `Provider.of<T>(context)` within a ViewModel:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../core/use_cases/example_use_case.dart';
+
+class ExampleViewModel extends ChangeNotifier {
+  final ExampleUseCase _exampleUseCase;
+
+  ExampleViewModel(BuildContext context)
+      : _exampleUseCase = Provider.of<ExampleUseCase>(context, listen: false);
+
+  void performAction() {
+    _exampleUseCase.doSomething();
+  }
+}
+```
+
+In the above example, the `ExampleViewModel` uses the `ExampleUseCase` provided by `Provider.of<ExampleUseCase>(context)` to perform actions or access functionality from the use case.
+
+11. Remember to import the necessary `provider` package classes (`Provider`, `Consumer`, `BuildContext`, etc.) wherever you need to use them.
+
+With the integration of the `provider` package, you can utilize its functionality for dependency injection and state management within your combined MVVM and Clean Architecture Flutter project. It allows you to provide and access instances of classes across different layers while promoting loose coupling and testability.
+
 ## Note: The above list of questions is not exhaustive and the actual questions asked in an interview may vary depending on the specific requirements of the employer and the level of expertise of the Flutter developer. It's always recommended to thoroughly research the company, the job role, and prepare well for technical and behavioral questions before any interview
